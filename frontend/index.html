@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIDI Control Frontend</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      min-height: 90vh;
+      height: 100%;
+      padding: 0px;
+      margin: 0px;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      margin: 2rem;
+      height: 100%;
+    }
+
+    button {
+      margin-right: 1rem;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+    }
+
+    .server-config {
+      margin-bottom: 1rem;
+    }
+
+    input {
+      padding: 0.4rem;
+      font-size: 1rem;
+      width: 300px;
+      margin-right: 1rem;
+    }
+
+    .log {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #000000;
+      border: 2.5px solid #727272;
+      max-height: 44vh;
+      overflow-y: auto;
+      flex-grow: 1;
+      font-family: monospace;
+      color: #00ff00;
+    }
+
+    .log-entry {
+      margin-bottom: 0.25rem;
+    }
+
+    .log-entry.error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <h1>MIDI Control Panel</h1>
+
+    <div class="server-config">
+      <label>Server address: </label>
+      <input v-model="server" placeholder="http://localhost:8080" />
+      <button @click="connectWebSocket">Reconnect WS</button>
+    </div>
+
+    <div class="buttons">
+      <button @click="sendStart">Start</button>
+      <button @click="sendGo">Go!</button>
+    </div>
+
+    <div class="log">
+      <div class="log-entry" :class="{ error: entry.includes('ERROR') }" v-for="(entry, index) in log" :key="index">
+        {{ entry }}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          server: "http://localhost:8080",
+          api_prefix: "/api/v1",
+          api_url: this.server + this.api_prefix,
+          log: [],
+          ws: null
+        };
+      },
+      methods: {
+        sendStart() {
+          fetch(`${this.api_url}/start`, { method: "POST" })
+            .then(res => res.json())
+            .then(data => this.log.unshift(`[POST /start] ${data.message}`))
+            .catch(err => this.log.unshift(`[ERROR] ${err}`));
+        },
+        sendGo() {
+          fetch(`${this.api_url}/go`, { method: "POST" })
+            .then(res => res.json())
+            .then(data => this.log.unshift(`[POST /go] ${data.message}`))
+            .catch(err => this.log.unshift(`[ERROR] ${err}`));
+        },
+        connectWebSocket() {
+          if (this.ws) {
+            this.ws.close();
+          }
+          const wsUrl = this.server.replace(/^http/, "ws") + "/ws/midi";
+          this.ws = new WebSocket(wsUrl);
+
+          this.ws.onmessage = (event) => {
+            this.log.unshift(`[WS] ${event.data}`);
+          };
+          this.ws.onerror = (err) => {
+            this.log.unshift(`[WS ERROR] ${err.message}`);
+          };
+          this.ws.onclose = () => {
+            this.log.unshift(`[WS] Connection closed`);
+          };
+          this.ws.onopen = () => {
+            this.log.unshift(`[WS] Connected to ${wsUrl}`);
+          };
+        }
+      },
+      mounted() {
+        this.connectWebSocket();
+      }
+    }).mount("#app");
+  </script>
+</body>
+
+</html>

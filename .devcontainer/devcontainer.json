@@ -1,0 +1,38 @@
+{
+  "name": "FastAPI MIDI Server",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "postCreateCommand": "pip install -r requirements.txt",
+  "postStartCommand": "python -Xfrozen_modules=off start-debug.py &",
+  "forwardPorts": [
+    8080,
+    5678
+  ],
+  "containerEnv": {
+    "PORT": "8080"
+  },
+  "mounts": [
+    "source=/dev/snd,target=/dev/snd,type=bind"
+  ],
+  "runArgs": [
+    "--device",
+    "/dev/snd",
+    "--group-add",
+    "audio"
+  ],
+  "remoteUser": "vscode"
+}
