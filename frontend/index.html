@@ -54,14 +54,10 @@
       text-transform: uppercase;
     }
 
-    .server-config {
-      margin: 1rem 0;
-    }
-
-    input[type=text] {
+    input[type=text],
+    input[type=number] {
       padding: 0.4rem;
       font-size: 1rem;
-      width: 300px;
       margin-right: 1rem;
       color: var(--text-color);
       background-color: transparent;
@@ -80,12 +76,13 @@
       padding: 1rem;
       background: var(--bg-color);
       border: 1px solid var(--border-color);
+      box-shadow: 0 0 10px var(--border-color);
       height: 44vh;
       overflow-y: auto;
       flex-grow: 1;
       font-family: monospace;
       color: var(--text-color);
-      box-shadow: 0 0 10px var(--border-color);
+      z-index: 10;
     }
 
     .log-entry {
@@ -111,12 +108,17 @@
 
     .settings {
       position: absolute;
+      z-index: 100;
       top: 40px;
       right: 10px;
       color: var(--text-color);
       background: var(--focus-bg-color);
       padding: 10px;
       border-radius: 5px;
+    }
+
+    .settings .server {
+      margin: .5rem 0;
     }
 
     .connection-indicator {
@@ -145,10 +147,51 @@
     </div>
 
     <div class="settings" v-if="settings_visible">
-      <label>
-        <input type="checkbox" v-model="expert_mode" @change="saveExpertMode">
-        Expert Mode
-      </label>
+      <div>
+        <h2>General settings</h2>
+
+        <input type="checkbox" id="show_log" v-model="show_log" @change="saveSetting('show_log', show_log)">
+        <label for="show_log">Show log</label>
+
+        <div class="server">
+          <label>Server address:</label>
+          <input type="text" v-model="server" @change="saveSetting('midiServer', server)"
+            placeholder="http://localhost:8080" />
+          <button @click="connectWebSocket">Reconnect WS</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 1em">
+        <h2>MIDI settings</h2>
+        <div>
+          <label>Device Name:</label>
+          <select v-model="midi_device_name" @change="saveSetting('midi_device_name', midi_device_name)">
+            <option v-for="device in midi_devices" :key="device" :value="device">{{ device }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="channel">Channel:</label>
+          <input type="number" min="0" max="15" id="channel" v-model.number="channel"
+            @change="saveSetting('channel', channel)" />
+        </div>
+
+        <div>
+          <label for="steps">Steps:</label>
+          <input type="number" min="1" id="steps" v-model.number="steps" @change="saveSetting('steps', steps)" />
+        </div>
+
+        <div>
+          <label for="step_delay">Step Delay (s):</label>
+          <input type="number" min="0" step="0.01" id="step_delay" v-model.number="step_delay"
+            @change="saveSetting('step_delay', step_delay)" />
+        </div>
+
+        <div>
+          <label for="controls">Controls (comma separated):</label>
+          <input type="text" id="controls" v-model="controls_raw" @change="parseControls" />
+        </div>
+      </div>
     </div>
 
     <h1>MIDI Control Panel</h1>
@@ -158,17 +201,9 @@
       <button class="control" @click="sendGo">Go!</button>
     </div>
 
-    <div id="expert-zone" :class="{ hidden: !expert_mode }">
-      <div class="log">
-        <div class="log-entry" :class="getEntryClass(entry)" v-for="(entry, index) in log" :key="index">
-          {{ entry }}
-        </div>
-      </div>
-
-      <div class="server-config">
-        <label>Server address: </label>
-        <input type="text" v-model="server" @change="saveServer" placeholder="http://localhost:8080" />
-        <button @click="connectWebSocket">Reconnect WS</button>
+    <div class="log" :class="{ hidden: !show_log }">
+      <div class="log-entry" :class="getEntryClass(entry)" v-for="(entry, index) in log" :key="index">
+        {{ entry }}
       </div>
     </div>
 
@@ -180,30 +215,57 @@
     createApp({
       data() {
         return {
+          midi_devices: [],
           server: localStorage.getItem("midiServer") || "http://localhost:8080",
           api_prefix: "/api/v1",
-          expert_mode: localStorage.getItem("expertMode") === "true",
+          show_log: localStorage.getItem("show_log") === "true",
           settings_visible: false,
           log: [],
           ws: null,
           connected: false,
-          reconnectDelay: 500
+          reconnectDelay: 500,
+          midi_device_name: localStorage.getItem("midi_device_name") || "",
+          channel: parseInt(localStorage.getItem("channel") || "0"),
+          steps: parseInt(localStorage.getItem("steps") || "20"),
+          step_delay: parseFloat(localStorage.getItem("step_delay") || "0.03"),
+          controls: JSON.parse(localStorage.getItem("controls") || "[0]"),
+          controls_raw: (localStorage.getItem("controls") ? JSON.parse(localStorage.getItem("controls")) : [0]).join(", ")
         };
       },
       computed: {
         api_url() {
           return this.server + this.api_prefix;
+        },
+        ws_url() {
+          if (this.server.includes("https")) {
+            return this.server.replace(/^https/, "wss") + "/ws/midi";
+          }
+          return this.server.replace(/^http/, "ws") + "/ws/midi";
         }
       },
       methods: {
-        saveServer() {
-          localStorage.setItem("midiServer", this.server);
+        saveSetting(key, value) {
+          localStorage.setItem(key, value);
         },
-        saveExpertMode() {
-          localStorage.setItem("expertMode", this.expert_mode);
+        parseControls() {
+          this.controls = this.controls_raw.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+          console.log(this.controls)
+          localStorage.setItem("controls", JSON.stringify(this.controls));
         },
         sendStart() {
-          fetch(`${this.api_url}/start`, { method: "POST" })
+          const params = new URLSearchParams();
+          params.append("midi_device_name", this.midi_device_name);
+          params.append("channel", this.channel);
+          params.append("steps", this.steps);
+          params.append("step_delay", this.step_delay);
+
+          fetch(`${this.api_url}/start?${params}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(this.controls),
+          })
             .then(res => res.json())
             .then(data => this.log.unshift(`[POST /start] ${data.message}`))
             .catch(err => this.log.unshift(`[ERROR] ${err}`));
@@ -218,8 +280,7 @@
           if (this.ws) {
             this.ws.close();
           }
-          const wsUrl = this.server.replace(/^http/, "ws") + "/ws/midi";
-          this.ws = new WebSocket(wsUrl);
+          this.ws = new WebSocket(this.ws_url);
 
           this.ws.onmessage = (event) => {
             try {
@@ -246,7 +307,7 @@
           };
           this.ws.onopen = () => {
             this.connected = true;
-            this.log.unshift(`[WS] Connected to ${wsUrl}`);
+            this.log.unshift(`[WS] Connected to ${this.ws_url}`);
           };
         },
         getEntryClass(entry) {
@@ -258,6 +319,17 @@
       },
       mounted() {
         this.connectWebSocket();
+
+        fetch(`${this.api_url}/midi_devices`)
+          .then(res => res.json())
+          .then(data => {
+            console.log(data);
+            this.midi_devices = data.output || [];
+            if (!this.midi_devices.includes(this.midi_device_name)) {
+              this.midi_device_name = this.midi_devices[0] || "";
+            }
+          })
+          .catch(err => this.log.unshift(`[ERROR] Failed to fetch MIDI devices: ${err}`));
       }
     }).mount("#app");
   </script>
