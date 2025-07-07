@@ -119,17 +119,20 @@ def midi_listener(device_name: str):
         with open_input(device_name) as port:
             for msg in port:
                 print(f"Received MIDI: {msg}")
-                asyncio.run(broadcast_midi(msg))
+                asyncio.run(broadcast_midi(device_name, msg))
     except Exception as e:
         print(f"Error in MIDI listener: {e}")
 
 
-async def broadcast_midi(msg: Message):
-    data = msg.dict()
+async def broadcast_midi(midi_msg: Message, device_name: str = "unknown"):
+    midi_data = midi_msg.dict()
     disconnected = []
     for client in connected_clients:
         try:
-            await client.send_text(json.dumps(data))
+            await client.send_text({
+                "device": device_name,
+                "data": json.dumps(midi_data)
+            })
         except Exception as e:
             print(f"Client disconnected or error: {e}")
             disconnected.append(client)
