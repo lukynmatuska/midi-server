@@ -101,6 +101,11 @@ async def websocket_midi_handler(websocket: WebSocket):
     print("WebSocket client connected.")
 
     try:
+        await websocket.send_json({
+            "input_devices": get_input_names(),
+            "output_devices": get_output_names()
+        })
+
         while True:
             await websocket.receive_text()  # Keep connection alive
     except WebSocketDisconnect:
