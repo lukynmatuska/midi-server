@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
-from mido import get_input_names, get_output_names, open_input, Message
+from mido import get_input_names, get_output_names, open_input, open_output, Message
 from git import Repo
 
 from responses import RootResponse, MidiDevicesResponse, MessageResponse
@@ -82,9 +82,14 @@ async def list_midi_devices():
 
 
 @app.post(f"{prefix}/start", response_model=MessageResponse)
-async def racers_to_start():
-    print("Racers to the starting line!")
-    return JSONResponse(content={"message": "Racers to the starting line!"})
+async def racers_to_start(midi_device_name: str = "X18/XR18:X18/XR18 MIDI 1 24:0"):
+    try:
+        with open_output(midi_device_name) as outport:
+            msg = Message("control_change", channel=0, control=0, value=0)
+            outport.send(msg)
+        return JSONResponse(content={"message": "MIDI signal sent (start)"})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"message": f"Failed to send MIDI: {e}"})
 
 
 @app.post(f"{prefix}/go", response_model=MessageResponse)
