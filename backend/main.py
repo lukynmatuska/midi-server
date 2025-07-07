@@ -36,8 +36,8 @@ app = FastAPI(
 )
 
 DEFAULT_MIDI_DEVICE = "X18/XR18:X18/XR18 MIDI 1 24:0"
-DEFAULT_CHANNELS = [0, 15]
-DEFAULT_CONTROL = 0
+DEFAULT_CHANNEL = 0
+DEFAULT_CONTROLS = [0, 15]
 DEFAULT_STEPS = 20
 DEFAULT_STEP_DELAY = 0.03  # in seconds (30 ms)
 MAX_VALUE = 127
@@ -92,16 +92,17 @@ async def list_midi_devices():
 @app.post(f"{prefix}/start", response_model=MessageResponse)
 async def racers_to_start(
     midi_device_name: str = DEFAULT_MIDI_DEVICE,
-    channels: list[int] = DEFAULT_CHANNELS,
+    channel: int = DEFAULT_CHANNEL,
     steps: int = DEFAULT_STEPS,
     step_delay: float = DEFAULT_STEP_DELAY,
-    control: int = DEFAULT_CONTROL
+    controls: list[int] = DEFAULT_CONTROLS
 ):
     try:
         with open_output(midi_device_name) as outport:
             for val in reversed(range(MIN_VALUE, MAX_VALUE + 1, MAX_VALUE // steps)):
-                for ch in channels:
-                    msg = Message("control_change", channel=ch, control=control, value=val)
+                # Do it for all music channels on the mix
+                for c in controls:
+                    msg = Message("control_change", channel=channel, control=c, value=val)
                     outport.send(msg)
                 await asyncio.sleep(step_delay)
         return JSONResponse(content={"message": f"MIDI fade-out sent ({steps} steps)"})
