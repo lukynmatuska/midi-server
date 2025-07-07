@@ -136,15 +136,15 @@ async def broadcast_midi(msg: Message):
     for client in disconnected:
         connected_clients.remove(client)
 
-
 def start_midi_thread():
-    device_name = os.environ.get("MIDI_INPUT", "")
-    if not device_name:
-        devices = get_input_names()
-        if not devices:
-            print("No MIDI input devices found.")
-            return
-        device_name = devices[0]  # Default to first available
+    devices = get_input_names()
+    if not devices:
+        print("No MIDI input devices found.")
+        return
 
-    thread = threading.Thread(target=midi_listener, args=(device_name,), daemon=True)
-    thread.start()
+    for device_name in devices:
+        print(f"Starting MIDI listener for: {device_name}")
+        thread = threading.Thread(
+            target=midi_listener, args=(device_name,), daemon=True
+        )
+        thread.start()
