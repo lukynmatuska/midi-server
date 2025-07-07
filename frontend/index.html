@@ -84,7 +84,7 @@
 
     <div class="server-config">
       <label>Server address: </label>
-      <input v-model="server" placeholder="http://localhost:8080" />
+      <input v-model="server" @change="saveServer" placeholder="http://localhost:8080" />
       <button @click="connectWebSocket">Reconnect WS</button>
     </div>
 
@@ -106,7 +106,7 @@
     createApp({
       data() {
         return {
-          server: "http://localhost:8080",
+          server: localStorage.getItem("midiServer") || "http://localhost:8080",
           api_prefix: "/api/v1",
           api_url: this.server + this.api_prefix,
           log: [],
@@ -114,6 +114,9 @@
         };
       },
       methods: {
+        saveServer() {
+          localStorage.setItem("midiServer", this.server);
+        },
         sendStart() {
           fetch(`${this.api_url}/start`, { method: "POST" })
             .then(res => res.json())
