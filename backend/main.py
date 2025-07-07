@@ -35,6 +35,14 @@ app = FastAPI(
     description="REST API for sending MIDI commands",
 )
 
+DEFAULT_MIDI_DEVICE = "X18/XR18:X18/XR18 MIDI 1 24:0"
+DEFAULT_CHANNELS = [0, 15]
+DEFAULT_CONTROL = 0
+DEFAULT_STEPS = 20
+DEFAULT_STEP_DELAY = 0.03  # in seconds (30 ms)
+MAX_VALUE = 127
+MIN_VALUE = 0
+
 try:
     origins = json.loads(os.getenv("CORS_ORIGINS"))
 except:  # noqa: E722
@@ -82,12 +90,21 @@ async def list_midi_devices():
 
 
 @app.post(f"{prefix}/start", response_model=MessageResponse)
-async def racers_to_start(midi_device_name: str = "X18/XR18:X18/XR18 MIDI 1 24:0"):
+async def racers_to_start(
+    midi_device_name: str = DEFAULT_MIDI_DEVICE,
+    channels: list[int] = DEFAULT_CHANNELS,
+    steps: int = DEFAULT_STEPS,
+    step_delay: float = DEFAULT_STEP_DELAY,
+    control: int = DEFAULT_CONTROL
+):
     try:
         with open_output(midi_device_name) as outport:
-            msg = Message("control_change", channel=0, control=0, value=0)
-            outport.send(msg)
-        return JSONResponse(content={"message": "MIDI signal sent (start)"})
+            for val in reversed(range(MIN_VALUE, MAX_VALUE + 1, MAX_VALUE // steps)):
+                for ch in channels:
+                    msg = Message("control_change", channel=ch, control=control, value=val)
+                    outport.send(msg)
+                await asyncio.sleep(step_delay)
+        return JSONResponse(content={"message": f"MIDI fade-out sent ({steps} steps)"})
     except Exception as e:
         return JSONResponse(status_code=500, content={"message": f"Failed to send MIDI: {e}"})
 
