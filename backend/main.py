@@ -119,7 +119,7 @@ def midi_listener(device_name: str):
         with open_input(device_name) as port:
             for msg in port:
                 print(f"Received MIDI: {msg}")
-                asyncio.run(broadcast_midi(device_name, msg))
+                asyncio.run(broadcast_midi(device_name=device_name, midi_msg=msg))
     except Exception as e:
         print(f"Error in MIDI listener: {e}")
 
@@ -129,7 +129,7 @@ async def broadcast_midi(midi_msg: Message, device_name: str = "unknown"):
     disconnected = []
     for client in connected_clients:
         try:
-            await client.send_text({
+            await client.send_json({
                 "device": device_name,
                 "data": json.dumps(midi_data)
             })
@@ -142,7 +142,10 @@ async def broadcast_midi(midi_msg: Message, device_name: str = "unknown"):
 def start_midi_thread():
     devices = get_input_names()
     if not devices:
-        print("No MIDI input devices found.")
+        print(
+            "No MIDI input devices found.", 
+            file=sys.stderr
+        )
         return
 
     for device_name in devices:
