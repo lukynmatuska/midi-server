@@ -2,7 +2,7 @@
   "name": "FastAPI MIDI Server",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": ".."
+    "context": "../backend"
   },
   "customizations": {
     "vscode": {
