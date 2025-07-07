@@ -120,7 +120,18 @@
           this.ws = new WebSocket(wsUrl);
 
           this.ws.onmessage = (event) => {
-            this.log.unshift(`[WS] ${event.data}`);
+            try {
+              const msg = JSON.parse(event.data);
+              if (msg.input_devices && msg.output_devices) {
+                this.log.unshift(`[WS] MIDI Devices:`);
+                msg.input_devices.forEach(name => this.log.unshift(` ↳ [IN ] ${name}`));
+                msg.output_devices.forEach(name => this.log.unshift(` ↳ [OUT] ${name}`));
+              } else {
+                this.log.unshift(`[WS] ${event.data}`);
+              }
+            } catch (e) {
+              this.log.unshift(`[WS] ${event.data}`);
+            }
           };
           this.ws.onerror = (err) => {
             this.log.unshift(`[WS ERROR] ${err.message}`);
