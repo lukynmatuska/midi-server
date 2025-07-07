@@ -12,6 +12,7 @@
       --focus-bg-color: rgba(255, 255, 255, .25);
       --text-color: white;
       --error-color: #ff4444;
+      --success-color: #00ff00;
       --border-color: #00ff00;
     }
 
@@ -85,6 +86,11 @@
       margin-bottom: 0.25rem;
     }
 
+    .log-entry.success {
+      color: var(--success-color);
+      font-weight: bold;
+    }
+
     .log-entry.error {
       color: var(--error-color);
       font-weight: bold;
@@ -108,7 +114,7 @@
     </div>
 
     <div class="log">
-      <div class="log-entry" :class="{ error: entry.includes('ERROR') }" v-for="(entry, index) in log" :key="index">
+      <div class="log-entry" :class="{ error: entry.includes('ERROR'), success: entry.includes('Connected') }" v-for="(entry, index) in log" :key="index">
         {{ entry }}
       </div>
     </div>
