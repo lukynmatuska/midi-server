@@ -1,0 +1,9 @@
+services:
+  midi-server:
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - PORT=8080
+    devices:
+      - "/dev/snd:/dev/snd"  # Optional: if you want ALSA MIDI access on host
