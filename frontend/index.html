@@ -180,7 +180,7 @@
           localStorage.setItem("midiServer", this.server);
         },
         saveExpertMode() {
-          localStorage.setItem("expertMode", this.server);
+          localStorage.setItem("expertMode", this.expert_mode);
         },
         sendStart() {
           fetch(`${this.api_url}/start`, { method: "POST" })
