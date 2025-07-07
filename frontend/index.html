@@ -19,8 +19,9 @@
     @media (prefers-color-scheme: light) {
       :root {
         --bg-color: #f4f4f4;
-        --focus-bg-color: rgba(black, .5);
+        --focus-bg-color: rgba(0, 0, 0, .1);
         --text-color: #222;
+        --success-color: green;
         --error-color: #c00;
         --border-color: #888;
       }
@@ -42,17 +43,22 @@
       margin: 2rem;
     }
 
-    button {
+    .hidden {
+      display: none !important;
+    }
+
+    button.control {
       margin-right: 1rem;
       padding: 0.5rem 1rem;
-      font-size: 1rem;
+      font-size: 2rem;
+      text-transform: uppercase;
     }
 
     .server-config {
-      margin-bottom: 1rem;
+      margin: 1rem 0;
     }
 
-    input {
+    input[type=text] {
       padding: 0.4rem;
       font-size: 1rem;
       width: 300px;
@@ -74,7 +80,7 @@
       padding: 1rem;
       background: var(--bg-color);
       border: 1px solid var(--border-color);
-      max-height: 44vh;
+      height: 44vh;
       overflow-y: auto;
       flex-grow: 1;
       font-family: monospace;
@@ -95,27 +101,58 @@
       color: var(--error-color);
       font-weight: bold;
     }
+
+    .cog {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+    }
+
+    .settings {
+      position: absolute;
+      top: 40px;
+      right: 10px;
+      color: var(--text-color);
+      background: var(--focus-bg-color);
+      padding: 10px;
+      border-radius: 5px;
+    }
   </style>
 </head>
 
 <body>
   <div id="app">
+    <div class="cog" @click="settings_visible = !settings_visible">
+      ⚙️
+    </div>
+
+    <div class="settings" v-if="settings_visible">
+      <label>
+        <input type="checkbox" v-model="expert_mode" @change="saveExpertMode">
+        Expert Mode
+      </label>
+    </div>
+
     <h1>MIDI Control Panel</h1>
 
-    <div class="server-config">
-      <label>Server address: </label>
-      <input v-model="server" @change="saveServer" placeholder="http://localhost:8080" />
-      <button @click="connectWebSocket">Reconnect WS</button>
-    </div>
-
     <div class="buttons">
-      <button @click="sendStart">Start</button>
-      <button @click="sendGo">Go!</button>
+      <button class="control" @click="sendStart">Start</button>
+      <button class="control" @click="sendGo">Go!</button>
     </div>
 
-    <div class="log">
-      <div class="log-entry" :class="{ error: entry.includes('ERROR'), success: entry.includes('Connected') }" v-for="(entry, index) in log" :key="index">
-        {{ entry }}
+    <div id="expert-zone" :class="{ hidden: !expert_mode }">
+      <div class="log">
+        <div class="log-entry" :class="{ error: entry.includes('ERROR'), success: entry.includes('Connected') }"
+          v-for="(entry, index) in log" :key="index">
+          {{ entry }}
+        </div>
+      </div>
+
+      <div class="server-config">
+        <label>Server address: </label>
+        <input type="text" v-model="server" @change="saveServer" placeholder="http://localhost:8080" />
+        <button @click="connectWebSocket">Reconnect WS</button>
       </div>
     </div>
   </div>
@@ -129,6 +166,8 @@
           server: localStorage.getItem("midiServer") || "http://localhost:8080",
           api_prefix: "/api/v1",
           api_url: this.server + this.api_prefix,
+          expert_mode: localStorage.getItem("expertMode") || false,
+          settings_visible: false,
           log: [],
           ws: null
         };
@@ -136,6 +175,9 @@
       methods: {
         saveServer() {
           localStorage.setItem("midiServer", this.server);
+        },
+        saveExpertMode() {
+          localStorage.setItem("expertMode", this.server);
         },
         sendStart() {
           fetch(`${this.api_url}/start`, { method: "POST" })
