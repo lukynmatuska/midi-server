@@ -118,11 +118,28 @@
       padding: 10px;
       border-radius: 5px;
     }
+
+    .connection-indicator {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: red;
+      box-shadow: 0 0 4px red;
+    }
+
+    .connection-indicator.online {
+      background-color: limegreen;
+      box-shadow: 0 0 6px limegreen;
+    }
   </style>
 </head>
 
 <body>
   <div id="app">
+    <div class="connection-indicator" :class="{ online: connected }"></div>
     <div class="cog" @click="settings_visible = !settings_visible">
       ⚙️
     </div>
@@ -154,6 +171,7 @@
         <button @click="connectWebSocket">Reconnect WS</button>
       </div>
     </div>
+
   </div>
 
   <script>
@@ -164,10 +182,11 @@
         return {
           server: localStorage.getItem("midiServer") || "http://localhost:8080",
           api_prefix: "/api/v1",
-          expert_mode: localStorage.getItem("expertMode") || false,
+          expert_mode: localStorage.getItem("expertMode") === "true",
           settings_visible: false,
           log: [],
-          ws: null
+          ws: null,
+          connected: false
         };
       },
       computed: {
@@ -216,12 +235,15 @@
             }
           };
           this.ws.onerror = (err) => {
+            this.connected = false;
             this.log.unshift(`[WS ERROR] ${err.message}`);
           };
           this.ws.onclose = () => {
+            this.connected = false;
             this.log.unshift(`[WS] Connection closed`);
           };
           this.ws.onopen = () => {
+            this.connected = true;
             this.log.unshift(`[WS] Connected to ${wsUrl}`);
           };
         },
