@@ -7,19 +7,32 @@
   <title>MIDI Control Frontend</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
+    :root {
+      --bg-color: black;
+      --text-color: #00ff00;
+      --error-color: #ff4444;
+      --border-color: #00ff00;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg-color: #f4f4f4;
+        --text-color: #222;
+        --error-color: #c00;
+        --border-color: #888;
+      }
+    }
+
     body {
       font-family: sans-serif;
-      min-height: 90vh;
-      height: 100%;
-      padding: 0px;
-      margin: 0px;
+      background: var(--bg-color);
+      color: var(--text-color);
     }
 
     #app {
       display: flex;
       flex-direction: column;
       margin: 2rem;
-      height: 100%;
     }
 
     button {
@@ -44,13 +57,14 @@
       flex-direction: column-reverse;
       margin-top: 2rem;
       padding: 1rem;
-      background: #000000;
-      border: 2.5px solid #727272;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
       max-height: 44vh;
       overflow-y: auto;
       flex-grow: 1;
       font-family: monospace;
-      color: #00ff00;
+      color: var(--text-color);
+      box-shadow: 0 0 10px var(--border-color);
     }
 
     .log-entry {
@@ -58,7 +72,7 @@
     }
 
     .log-entry.error {
-      color: red;
+      color: var(--error-color);
       font-weight: bold;
     }
   </style>
