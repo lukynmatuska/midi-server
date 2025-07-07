@@ -9,7 +9,8 @@
   <style>
     :root {
       --bg-color: black;
-      --text-color: #00ff00;
+      --focus-bg-color: rgba(255, 255, 255, .25);
+      --text-color: white;
       --error-color: #ff4444;
       --border-color: #00ff00;
     }
@@ -17,10 +18,15 @@
     @media (prefers-color-scheme: light) {
       :root {
         --bg-color: #f4f4f4;
+        --focus-bg-color: rgba(black, .5);
         --text-color: #222;
         --error-color: #c00;
         --border-color: #888;
       }
+    }
+
+    *:focus {
+      outline: none;
     }
 
     body {
@@ -50,6 +56,14 @@
       font-size: 1rem;
       width: 300px;
       margin-right: 1rem;
+      color: var(--text-color);
+      background-color: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    input:focus {
+      background-color: var(--focus-bg-color);
     }
 
     .log {
