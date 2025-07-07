@@ -186,7 +186,8 @@
           settings_visible: false,
           log: [],
           ws: null,
-          connected: false
+          connected: false,
+          reconnectDelay: 500
         };
       },
       computed: {
@@ -241,6 +242,7 @@
           this.ws.onclose = () => {
             this.connected = false;
             this.log.unshift(`[WS] Connection closed`);
+            setTimeout(this.connectWebSocket, this.reconnectDelay);
           };
           this.ws.onopen = () => {
             this.connected = true;
