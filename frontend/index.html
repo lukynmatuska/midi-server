@@ -143,8 +143,7 @@
 
     <div id="expert-zone" :class="{ hidden: !expert_mode }">
       <div class="log">
-        <div class="log-entry" :class="{ error: entry.includes('ERROR'), success: entry.includes('Connected') }"
-          v-for="(entry, index) in log" :key="index">
+        <div class="log-entry" :class="getEntryClass(entry)" v-for="(entry, index) in log" :key="index">
           {{ entry }}
         </div>
       </div>
@@ -165,12 +164,16 @@
         return {
           server: localStorage.getItem("midiServer") || "http://localhost:8080",
           api_prefix: "/api/v1",
-          api_url: this.server + this.api_prefix,
           expert_mode: localStorage.getItem("expertMode") || false,
           settings_visible: false,
           log: [],
           ws: null
         };
+      },
+      computed: {
+        api_url() {
+          return this.server + this.api_prefix;
+        }
       },
       methods: {
         saveServer() {
@@ -221,7 +224,13 @@
           this.ws.onopen = () => {
             this.log.unshift(`[WS] Connected to ${wsUrl}`);
           };
-        }
+        },
+        getEntryClass(entry) {
+          return {
+            error: ['ERROR', 'Connection closed'].some(str => entry.includes(str)),
+            success: ['POST', 'GET', 'Connected'].some(str => entry.includes(str))
+          };
+        },
       },
       mounted() {
         this.connectWebSocket();
