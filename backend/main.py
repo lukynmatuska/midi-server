@@ -39,9 +39,10 @@ DEFAULT_MIDI_DEVICE = "X18/XR18:X18/XR18 MIDI 1 24:0"
 DEFAULT_CHANNEL = 0
 DEFAULT_CONTROLS = [0, 15]
 DEFAULT_STEPS = 20
-DEFAULT_STEP_DELAY = 0.03  # in seconds (30 ms)
+DEFAULT_STEP_DELAY = 0.045  # in seconds (45 ms)
 MAX_VALUE = 127
 MIN_VALUE = 0
+ZERO_DB = (95 + 5) # MIDI control value for zero decibels
 
 try:
     origins = json.loads(os.getenv("CORS_ORIGINS"))
@@ -111,9 +112,26 @@ async def racers_to_start(
 
 
 @app.post(f"{prefix}/go", response_model=MessageResponse)
-async def racers_go():
-    print("Racers are running!")
-    return JSONResponse(content={"message": "Racers are running!"})
+async def racers_go(
+    midi_device_name: str = DEFAULT_MIDI_DEVICE,
+    channel: int = DEFAULT_CHANNEL,
+    steps: int = DEFAULT_STEPS,
+    step_delay: float = DEFAULT_STEP_DELAY,
+    controls: list[int] = DEFAULT_CONTROLS
+):
+    try:
+        with open_output(midi_device_name) as outport:
+            for val in range(MIN_VALUE, ZERO_DB, (MIN_VALUE + ZERO_DB) // steps):
+                # Do it for all music channels on the mix
+                for c in controls:
+                    msg = Message("control_change", channel=channel, control=c, value=val)
+                    outport.send(msg)
+                await asyncio.sleep(step_delay)
+        return JSONResponse(content={"message": f"MIDI fade-in sent ({steps} steps)"})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"message": f"Failed to send MIDI: {e}"})
+    # print("Racers are running!")
+    # return JSONResponse(content={"message": "Racers are running!"})
 
 
 

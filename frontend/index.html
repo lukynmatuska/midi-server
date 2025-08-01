@@ -271,7 +271,19 @@
             .catch(err => this.log.unshift(`[ERROR] ${err}`));
         },
         sendGo() {
-          fetch(`${this.api_url}/go`, { method: "POST" })
+          const params = new URLSearchParams();
+          params.append("midi_device_name", this.midi_device_name);
+          params.append("channel", this.channel);
+          params.append("steps", this.steps);
+          params.append("step_delay", this.step_delay);
+
+          fetch(`${this.api_url}/go?${params}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(this.controls),
+          })
             .then(res => res.json())
             .then(data => this.log.unshift(`[POST /go] ${data.message}`))
             .catch(err => this.log.unshift(`[ERROR] ${err}`));
